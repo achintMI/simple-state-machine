@@ -1,27 +1,24 @@
 from collections import defaultdict
 
-import States
-import Transitions
+from State import State
+from Transition import Transition
 
 class StateMachine:
 
 	def __init__(self, allStates, allTransitions, initialState = None):
-		self.states = None
-		self.transitions = None
+		self.states = dict()
+		self.transitions = defaultdict(list)
 		if allStates:
-			self.states = self.addStates(allStates)
+			self.addStates(allStates)
 		
-
 		if allTransitions:
-			self.transitions = self.addTransitions(allTransitions)
+			self.addTransitions(allTransitions)
 
 		self.initialState = self.states[initialState]
 
 	def addStates(self, states):
-		stateDict = {}
 		for state in states:
-			stateDict[state] = States.State(state)
-		return stateDict
+			self.states[state] = State(state)
 
 	def addTransitions(self, transitions):
 		transitionList = defaultdict(list)
@@ -30,33 +27,39 @@ class StateMachine:
 			transitionSource = transition["source"]
 			transitionDest = transition["dest"]
 
-			transitionObj = Transitions.Transition(transitionType)
-			transitionObj.setInitialStates(self.addSourceStates(transitionSource))
-			transitionObj.setFinalStates(self.addDestStates(transitionDest))
+			transitionObj = Transition(transitionType)
+
+			sourcesToAdd = self.addSourceStates(transitionSource)
+			destToAdd = self.addSourceStates(transitionDest)
+
+			transitionObj.setInitialStates(sourcesToAdd)
+			transitionObj.setFinalStates(destToAdd)
 
 			for source in transitionObj.getInitialStates():
+				self.transitions[source].append(transitionObj)
 
-				transitionList[source].append(transitionObj)
-		return transitionList
+	def addSourceStates(self, transitionSources):
+		if type(transitionSources) is str:
+			return [self.states[transitionSources]]
 
-	def addSourceStates(self, transitionSources: list):
 		initialStates = []
 		for source in transitionSources:
-			initialStates.append(self.addSourceStates(source))
+			initialStates = initialStates + self.addSourceStates(source)
 		return initialStates
 
-	def addSourceStates(self, transitionSource: str):
-		return self.states[transitionSource]
-
 	def addDestStates(self, transitionDest: list):
+		if type(transitionDest) is str:
+			return [self.states[transitionDest]]
+
 		finalStates = []
 		for dest in transitionDest:
-			finalStates.append(self.addDestStates(dest))
+			finalStates = finalStates + self.addDestStates(dest)
 		return finalStates
 
-	def addDestStates(self, transitionDest: str):
-		return self.states[transitionDest]
-
-
+	def showStateMachine(self):
+		for stateName, state in self.states.items():
+			for transition in self.transitions[state]:
+				for finalState in transition.getFinalStates():
+					print(stateName + f' -> {transition.getTransitionName()} -> ' + finalState.getCurrentStateName())
 
 
